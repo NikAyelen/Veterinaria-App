@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { StatCard } from "../components/StatCard";
+import { NuevaCitaForm } from "../components/NuevaCitaForm";
 //import { citasIniciales } from "../data/citas";
 import {
-  actualizarEstado, obtenerCitas,
+  actualizarCita, actualizarEstado, crearCita, obtenerCitas,
 } from "../services/citasApi";
 
-import type { Cita, EstadoCita } from "../types";
+import type { Cita, EstadoCita, NuevaCita } from "../types";
 
 type Filtro = "todas" | EstadoCita;
 
@@ -14,6 +15,8 @@ export function AppointmentsPage() {
   const [citas, setCitas] = useState<Cita[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [citaEditando, setCitaEditando] = useState<Cita | null>(null);
 
   useEffect(() => {
     async function cargarCitas() {
@@ -36,9 +39,43 @@ export function AppointmentsPage() {
       setCitas((actuales) =>
         actuales.map((cita) => (cita.id === id ? actualizada : cita)),
       );
+      setError("");
     } catch (error) {
       setError(error instanceof Error ? error.message : "Error al confirmar.");
     }
+  }
+
+  // guarda la cita con el POST y la agrega a la lista
+  // si falla, el error lo muestra el formulario
+  async function registrarCita(datos: NuevaCita) {
+    const nueva = await crearCita(datos);
+    setCitas((actuales) => [...actuales, nueva]);
+    setMensaje("Cita registrada correctamente.");
+    setError("");
+    setMostrarForm(false);
+  }
+
+  // abre el formulario con los datos de la cita que se quiere editar
+  function editarCita(cita: Cita) {
+    setCitaEditando(cita);
+    setMostrarForm(true);
+    setMensaje("");
+  }
+
+  // guarda los cambios con el PUT y reemplaza la cita en la lista
+  async function guardarEdicion(datos: NuevaCita) {
+    if (!citaEditando) return;
+    const actualizada = await actualizarCita(citaEditando.id, {
+      ...datos,
+      estado: citaEditando.estado,
+    });
+    setCitas((actuales) =>
+      actuales.map((cita) => (cita.id === actualizada.id ? actualizada : cita)),
+    );
+    setMensaje("Cita actualizada correctamente.");
+    setError("");
+    setMostrarForm(false);
+    setCitaEditando(null);
   }
 
   const [filtro, setFiltro] = useState<Filtro>("todas");
@@ -60,10 +97,29 @@ export function AppointmentsPage() {
             Consulta y administra las citas del día.
           </p>
         </div>
-        <button className="rounded-xl bg-teal-700 px-5 py-3 font-semibold text-white hover:bg-teal-800">
+        <button
+          onClick={() => {
+            setCitaEditando(null);
+            setMostrarForm(true);
+            setMensaje("");
+          }}
+          className="rounded-xl bg-teal-700 px-5 py-3 font-semibold text-white hover:bg-teal-800"
+        >
           + Nueva cita
         </button>
       </section>
+
+      {mostrarForm && (
+        <NuevaCitaForm
+          key={citaEditando ? citaEditando.id : "nueva"}
+          cita={citaEditando ?? undefined}
+          onGuardar={citaEditando ? guardarEdicion : registrarCita}
+          onCancelar={() => {
+            setMostrarForm(false);
+            setCitaEditando(null);
+          }}
+        />
+      )}
 
       <section className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
@@ -112,13 +168,27 @@ export function AppointmentsPage() {
         </p>
       )}
 
+      {error && (
+        <p
+          aria-live="polite"
+          className="mt-6 rounded-xl bg-red-100 px-4 py-3 text-red-800"
+        >
+          {error}
+        </p>
+      )}
+
       <section className="mt-6 grid gap-4">
-        {citasFiltradas.length > 0 ? (
+        {cargando ? (
+          <p className="rounded-2xl bg-white p-8 text-center text-slate-500">
+            Cargando citas...
+          </p>
+        ) : citasFiltradas.length > 0 ? (
           citasFiltradas.map((cita) => (
             <AppointmentCard
               key={cita.id}
               cita={cita}
               onConfirmar={confirmarCita}
+              onEditar={editarCita}
             />
           ))
         ) : (

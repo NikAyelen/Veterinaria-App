@@ -10,9 +10,7 @@ import { citaRouter } from "./routes/cita.routes.js";
 const app = express();
 const PORT = Number(process.env.PORT ?? 3000);
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
-}));
+app.use(cors()); // permite peticiones desde cualquier origen
 
 app.use(express.json());
 
