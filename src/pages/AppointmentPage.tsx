@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { StatCard } from "../components/StatCard";
 import { NuevaCitaForm } from "../components/NuevaCitaForm";
-//import { citasIniciales } from "../data/citas";
+
 import {
-  actualizarCita, actualizarEstado, crearCita, obtenerCitas,
+  actualizarCita, actualizarEstado, crearCita, eliminarCita, obtenerCitas,
 } from "../services/citasApi";
 
 import type { Cita, EstadoCita, NuevaCita } from "../types";
@@ -76,6 +76,20 @@ export function AppointmentsPage() {
     setError("");
     setMostrarForm(false);
     setCitaEditando(null);
+  }
+
+  // pide confirmación, borra con el DELETE y quita la cita de la lista
+  async function borrarCita(id: number) {
+    if (!window.confirm("¿Seguro que quieres eliminar esta cita?")) return;
+    try {
+      await eliminarCita(id);
+      setCitas((actuales) => actuales.filter((cita) => cita.id !== id));
+      setMensaje("Cita eliminada correctamente.");
+      setError("");
+    } catch (error) {
+      setMensaje("");
+      setError(error instanceof Error ? error.message : "Error al eliminar.");
+    }
   }
 
   const [filtro, setFiltro] = useState<Filtro>("todas");
@@ -189,6 +203,7 @@ export function AppointmentsPage() {
               cita={cita}
               onConfirmar={confirmarCita}
               onEditar={editarCita}
+              onEliminar={borrarCita}
             />
           ))
         ) : (

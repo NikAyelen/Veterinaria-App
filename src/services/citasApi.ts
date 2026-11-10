@@ -49,3 +49,16 @@ export async function actualizarCita(
   if (!respuesta.ok) throw new Error(resultado.mensaje);
   return resultado.cita;
 }
+
+// manda el id al DELETE para borrar la cita de la BD
+// el backend responde 204 
+export async function eliminarCita(id: number): Promise<void> {
+  const respuesta = await fetch(`${API_URL}/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!respuesta.ok) {
+    const resultado = await respuesta.json();
+    throw new Error(resultado.mensaje); // mensaje del backend
+  }
+}
